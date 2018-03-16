@@ -1,0 +1,3 @@
+[submodule "submodules/falconn"]
+	path = submodules/falconn
+	url = git@github.com:FALCONN-LIB/FALCONN.git

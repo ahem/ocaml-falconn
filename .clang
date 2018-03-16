@@ -1,0 +1,1 @@
+flags = -std=c++14 -Wall -O3 -march=native $< -o $@ -I ./submodules/falconn/src/include -I ./submodules/falconn/external/eigen -pthread

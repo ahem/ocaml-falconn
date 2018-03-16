@@ -1,0 +1,8 @@
+opam-version: "1.2"
+build: [["jbuilder" "build" "-p" name "-j" jobs]]
+build-test: [["jbuilder" "runtest" "-p" name "-j" jobs]]
+depends: [
+  "async" {>= "v0.9"}
+  "core" {>= "v0.9"}
+  "jbuilder" {build}
+]
