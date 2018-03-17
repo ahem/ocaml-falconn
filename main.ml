@@ -22,12 +22,12 @@ let () =
   in
   let params = LSHConstructionParameters.compute_number_of_hash_functions params 20 in
   let table = LSHNearestNeighborTable.create params dataset in
-  let query_object = LSHNearestNeighborQuery.create table 80 in
+  let query_object = LSHNearestNeighborQuery.create ~num_probes:80 table in
 
   let q = Array2.slice_left dataset 3 in
   let result = LSHNearestNeighborQuery.find_k_nearest_neighbors query_object q 10 in
   for i = 0 to 9 do Printf.printf "%d\n" (Int32.to_int_exn result.{i}) done;
 
-  let query_pool = LSHNearestNeighborQueryPool.create table 80 (-1) 0 in
+  let query_pool = LSHNearestNeighborQueryPool.create table ~num_probes:80 in
   let result = LSHNearestNeighborQueryPool.find_k_nearest_neighbors query_pool q 10 in
   for i = 0 to 9 do Printf.printf "%d\n" (Int32.to_int_exn result.{i}) done

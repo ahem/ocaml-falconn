@@ -62,13 +62,12 @@ module LSHNearestNeighborQuery = struct
   type t = unit ptr
   let t : t typ = ptr void
 
-  let create =
+  let _create =
     foreign ~from:libfalconn "create_query_object"
-      (LSHNearestNeighborTable.t @-> int @-> returning t)
+      (LSHNearestNeighborTable.t @-> int @-> int @-> returning t)
 
-  let set_num_probes =
-    foreign ~from:libfalconn "qobj_set_num_probes"
-      (t @-> int @-> returning void)
+  let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) table =
+    _create table num_probes max_num_candidates
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qobj_find_k_nearest_neighbors"
@@ -77,15 +76,22 @@ module LSHNearestNeighborQuery = struct
   let find_k_nearest_neighbors qobj query k =
     let r = _find_k_nearest_neighbors qobj (bigarray_start array1 query) k (Array1.dim query) in
     bigarray_of_ptr array1 (getf r length |> Unsigned.UInt64.to_int) int32 (getf r arr)
+
+  let set_num_probes =
+    foreign ~from:libfalconn "qobj_set_num_probes"
+      (t @-> int @-> returning void)
 end
 
 module LSHNearestNeighborQueryPool = struct
   type t = unit ptr
   let t : t typ = ptr void
 
-  let create =
+  let _create =
     foreign ~from:libfalconn "create_query_pool"
       (LSHNearestNeighborTable.t @-> int @-> int @-> int @-> returning t)
+
+  let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) ?(num_query_objects=0) table =
+    _create table num_probes max_num_candidates num_query_objects
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qpool_find_k_nearest_neighbors"
@@ -94,5 +100,9 @@ module LSHNearestNeighborQueryPool = struct
   let find_k_nearest_neighbors qobj query k =
     let r = _find_k_nearest_neighbors qobj (bigarray_start array1 query) k (Array1.dim query) in
     bigarray_of_ptr array1 (getf r length |> Unsigned.UInt64.to_int) int32 (getf r arr)
+
+  let set_num_probes =
+    foreign ~from:libfalconn "qpool_set_num_probes"
+      (t @-> int @-> returning void)
 end
 
