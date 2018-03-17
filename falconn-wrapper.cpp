@@ -5,7 +5,6 @@
 #include <iostream>
 
 #include <falconn/lsh_nn_table.h>
-#include "./falconn-wrapper.h"
 
 using falconn::DenseVector;
 using falconn::DistanceFunction;
@@ -20,7 +19,7 @@ using falconn::construct_table;
 
 typedef DenseVector<float> Point;
 
-void* create_table(int num_hash_tables, int num_hash_bits, int num_rotations, int num_points, int num_dimensions, float *dataset) {
+extern "C" void* create_table(int num_hash_tables, int num_hash_bits, int num_rotations, int num_points, int num_dimensions, float *dataset) {
     PlainArrayPointSet<float> converted_points;
     converted_points.data = dataset;
     converted_points.num_points = num_points;
@@ -38,13 +37,13 @@ void* create_table(int num_hash_tables, int num_hash_bits, int num_rotations, in
     return construct_table<Point>(converted_points, params).release();
 }
 
-void* create_query_object(void *table_ptr, int num_probes) {
+extern "C" void* create_query_object(void *table_ptr, int num_probes) {
     auto *table = (LSHNearestNeighborTable<Point>*)table_ptr;
     return table->construct_query_object(num_probes).release();
 }
 
 // FIXME: this should probably return a struct with both a count and the indexes
-int* find_k_nearest_neighbors(void* query_object_ptr, float *p, int k, int num_dimensions) {
+extern "C" int* find_k_nearest_neighbors(void* query_object_ptr, float *p, int k, int num_dimensions) {
     auto q = Eigen::Map<Point>(p, num_dimensions, 1);
     auto *query_object = (LSHNearestNeighborQuery<Point>*)query_object_ptr;
     auto result = new std::vector<int>();
