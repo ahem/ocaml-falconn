@@ -5,4 +5,6 @@ depends: [
   "async" {>= "v0.9"}
   "core" {>= "v0.9"}
   "jbuilder" {build}
+  "ctypes"
+  "ctypes-foreign"
 ]
