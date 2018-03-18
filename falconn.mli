@@ -5,12 +5,12 @@ module LSHConstructionParameters :
     type lsh_family_t = Unknown | CrossPolytope | Hyperplane
 
     type distance_function_t =
-        Unknown
+      | Unknown
       | EuclideanSquared
       | NegativeInnerProduct
 
     type storage_hash_table_t =
-        Unknown
+      | Unknown
       | BitPackedFlatHashTable
       | FlatHashTable
       | LinearProbingHashTable
@@ -31,9 +31,7 @@ module LSHConstructionParameters :
     }
 
     val empty : t
-
     val get_default_parameters : int -> int -> distance_function_t -> bool -> t
-
     val compute_number_of_hash_functions : t -> int -> t
   end
 
@@ -43,6 +41,20 @@ module LSHNearestNeighborTable :
 
     val create : LSHConstructionParameters.t -> (float, 'a, 'b) Bigarray.Array2.t -> t
   end
+
+module QueryStatistics :
+  sig
+    type t = {
+      average_total_query_time : float;  
+      average_lsh_time : float;
+      average_hash_table_time : float;
+      average_distance_time : float;
+      average_num_candidates : float;
+      average_num_unique_candidates : float;
+      num_queries : int;
+    }
+  end
+
 
 module LSHNearestNeighborQuery :
   sig
@@ -57,7 +69,13 @@ module LSHNearestNeighborQuery :
       (float, 'a, 'b) Bigarray.Array1.t ->
       int -> (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t
 
+    val get_num_probes : t -> int
     val set_num_probes : t -> int -> unit
+
+    val get_max_num_candidates : t -> int
+    val set_max_num_candidates : t -> int -> unit
+
+    val get_query_statistics : t -> QueryStatistics.t
   end
 
 module LSHNearestNeighborQueryPool :
@@ -74,6 +92,12 @@ module LSHNearestNeighborQueryPool :
       (float, 'a, 'b) Bigarray.Array1.t ->
       int -> (int32, Bigarray.int32_elt, Bigarray.c_layout) Bigarray.Array1.t
 
+    val get_num_probes : t -> int
     val set_num_probes : t -> int -> unit
+
+    val get_max_num_candidates : t -> int
+    val set_max_num_candidates : t -> int -> unit
+
+    val get_query_statistics : t -> QueryStatistics.t
   end
 

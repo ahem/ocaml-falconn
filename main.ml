@@ -28,6 +28,8 @@ let () =
   let result = LSHNearestNeighborQuery.find_k_nearest_neighbors query_object q 10 in
   for i = 0 to 9 do Printf.printf "%d\n" (Int32.to_int_exn result.{i}) done;
 
+  Printf.printf "average_total_query_time: %f\n" (LSHNearestNeighborQuery.get_query_statistics query_object).average_total_query_time;
+
   let query_pool = LSHNearestNeighborQueryPool.create table ~num_probes:80 in
   Printf.printf "constructed query pool\n";
   let result = LSHNearestNeighborQueryPool.find_k_nearest_neighbors query_pool q 10 in

@@ -15,6 +15,8 @@ using falconn::LSHNearestNeighborQueryPool;
 using falconn::LSHNearestNeighborTable;
 using falconn::PlainArrayPointSet;
 using falconn::StorageHashTable;
+using falconn::QueryStatistics;
+
 
 typedef DenseVector<float> Point;
 extern "C" {
@@ -47,12 +49,28 @@ extern "C" {
     // QueryObject
     // =============================================
 
-    LSHNearestNeighborQuery<Point>* create_query_object(LSHNearestNeighborTable<Point> &table, int32_t num_probes, int32_t max_num_candidates) {
+    LSHNearestNeighborQuery<Point>* create_query_object(LSHNearestNeighborTable<Point> &table, int32_t num_probes, int64_t max_num_candidates) {
         return table.construct_query_object(num_probes, max_num_candidates).release();
     }
 
     void qobj_set_num_probes(LSHNearestNeighborQuery<Point> &query_object, int32_t num_probes) {
         query_object.set_num_probes(num_probes);
+    }
+    
+    int32_t qobj_get_num_probes(LSHNearestNeighborQuery<Point> &query_object) {
+        return query_object.get_num_probes();
+    }
+
+    void qobj_set_max_num_candidates(LSHNearestNeighborQuery<Point> &query_object, int64_t max_num_candidates) {
+        query_object.set_max_num_candidates(max_num_candidates);
+    }
+
+    int64_t qobj_get_max_num_candidates(LSHNearestNeighborQuery<Point> &query_object) {
+        return query_object.get_max_num_candidates();
+    }
+
+    int32_t qobj(LSHNearestNeighborQueryPool<Point> &query_object, float *p, int32_t num_dimensions) {
+        return query_object.find_nearest_neighbor(Eigen::Map<Point>(p, num_dimensions, 1));
     }
 
     results qobj_find_k_nearest_neighbors(LSHNearestNeighborQuery<Point> &query_object, float *p, int32_t k, int32_t num_dimensions) {
@@ -61,17 +79,37 @@ extern "C" {
         return results { result->data(), result->size() };
     }
 
+    void* qobj_get_query_statistics(LSHNearestNeighborQuery<Point> &query_object) {
+        return new QueryStatistics(query_object.get_query_statistics());
+    }
+
     // =============================================
     // QueryPool
     // =============================================
  
     LSHNearestNeighborQueryPool<Point>* create_query_pool(
-            LSHNearestNeighborTable<Point> &table, int32_t num_probes, int32_t max_num_candidates, int32_t num_query_objects) {
+            LSHNearestNeighborTable<Point> &table, int32_t num_probes, int64_t max_num_candidates, int32_t num_query_objects) {
         return table.construct_query_pool(num_probes, max_num_candidates, num_query_objects).release();
     }
 
     void qpool_set_num_probes(LSHNearestNeighborQueryPool<Point> &pool, int32_t num_probes) {
         pool.set_num_probes(num_probes);
+    }
+
+    int32_t qpool_get_num_probes(LSHNearestNeighborQueryPool<Point> &pool) {
+        return pool.get_num_probes();
+    }
+
+    int32_t qpool_find_nearest_neighbor(LSHNearestNeighborQueryPool<Point> &pool, float *p, int32_t num_dimensions) {
+        return pool.find_nearest_neighbor(Eigen::Map<Point>(p, num_dimensions, 1));
+    }
+
+    void qpool_set_max_num_candidates(LSHNearestNeighborQuery<Point> &pool, int64_t max_num_candidates) {
+        pool.set_max_num_candidates(max_num_candidates);
+    }
+
+    int64_t qpool_get_max_num_candidates(LSHNearestNeighborQuery<Point> &pool) {
+        return pool.get_max_num_candidates();
     }
 
     results qpool_find_k_nearest_neighbors(LSHNearestNeighborQueryPool<Point> &pool, float *p, int32_t k, int32_t num_dimensions) {
@@ -80,5 +118,8 @@ extern "C" {
         return results { result->data(), result->size() };
     }
 
-}
+    void* qpool_get_query_statistics(LSHNearestNeighborQueryPool<Point> &pool) {
+        return new QueryStatistics(pool.get_query_statistics());
+    }
 
+}

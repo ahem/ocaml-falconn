@@ -118,6 +118,40 @@ module LSHNearestNeighborTable = struct
     _create_table (LSHConstructionParameters.to_struct params |> addr) num_points num_dimensions dataset_ptr
 end
 
+module QueryStatistics = struct
+  type t = {
+    average_total_query_time : float;  
+    average_lsh_time : float;
+    average_hash_table_time : float;
+    average_distance_time : float;
+    average_num_candidates : float;
+    average_num_unique_candidates : float;
+    num_queries : int;
+  }
+
+  type stats
+  let stats : stats structure typ = structure "QueryStatistics"
+  let average_total_query_time      = field stats "average_total_query_time" double
+  let average_lsh_time              = field stats "average_lsh_time" double
+  let average_hash_table_time       = field stats "average_hash_table_time" double
+  let average_distance_time         = field stats "average_distance_time" double
+  let average_num_candidates        = field stats "average_num_candidates" double
+  let average_num_unique_candidates = field stats "average_num_unique_candidates" double
+  let num_queries                   = field stats "num_queries" int64_t
+  let () = seal stats
+
+  let from_struct s = {
+    average_total_query_time      = getf s average_total_query_time;
+    average_lsh_time              = getf s average_lsh_time;
+    average_hash_table_time       = getf s average_hash_table_time;
+    average_distance_time         = getf s average_distance_time;
+    average_num_candidates        = getf s average_num_candidates;
+    average_num_unique_candidates = getf s average_num_unique_candidates;
+    num_queries                   = Int64.to_int (getf s num_queries);
+  }
+ 
+end
+
 type results
 let results : results structure typ = structure "results"
 let arr     = field results "arr" (ptr int32_t)
@@ -130,22 +164,39 @@ module LSHNearestNeighborQuery = struct
 
   let _create =
     foreign ~from:libfalconn "create_query_object"
-      (LSHNearestNeighborTable.t @-> int @-> int @-> returning t)
+      (LSHNearestNeighborTable.t @-> int32_t @-> int64_t @-> returning t)
 
   let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) table =
-    _create table num_probes max_num_candidates
+    _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates)
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qobj_find_k_nearest_neighbors"
-      (t @-> ptr float @-> int @-> int @-> returning results)
+      (t @-> ptr float @-> int32_t @-> int32_t @-> returning results)
 
   let find_k_nearest_neighbors qobj query k =
-    let r = _find_k_nearest_neighbors qobj (bigarray_start array1 query) k (Array1.dim query) in
+    let r = _find_k_nearest_neighbors qobj (bigarray_start array1 query) (Int32.of_int k) (Array1.dim query |> Int32.of_int) in
     bigarray_of_ptr array1 (getf r length |> Unsigned.UInt64.to_int) int32 (getf r arr)
 
-  let set_num_probes =
-    foreign ~from:libfalconn "qobj_set_num_probes"
-      (t @-> int @-> returning void)
+  let get_num_probes = foreign ~from:libfalconn "qobj_get_num_probes" (t @-> returning int32_t)
+  let set_num_probes = foreign ~from:libfalconn "qobj_set_num_probes" (t @-> int32_t @-> returning void)
+
+  let get_max_num_candidates = foreign ~from:libfalconn "qobj_get_max_num_candidates" (t @-> returning int64_t)
+  let set_max_num_candidates = foreign ~from:libfalconn "qobj_set_max_num_candidates" (t @-> int64_t @-> returning void)
+
+  let _get_num_probes = foreign ~from:libfalconn "qobj_get_num_probes" (t @-> returning int32_t)
+  let get_num_probes qobj = _get_num_probes qobj |> Int32.to_int
+
+  let _set_num_probes = foreign ~from:libfalconn "qobj_set_num_probes" (t @-> int32_t @-> returning void)
+  let set_num_probes qobj num_probes = _set_num_probes qobj (Int32.of_int num_probes)
+
+  let _get_max_num_candidates = foreign ~from:libfalconn "qobj_get_max_num_candidates" (t @-> returning int64_t)
+  let get_max_num_candidates qobj = _get_max_num_candidates qobj |> Int64.to_int
+
+  let _set_max_num_candidates = foreign ~from:libfalconn "qobj_set_max_num_candidates" (t @-> int64_t @-> returning void)
+  let set_max_num_candidates qobj max_num_candidates = _set_max_num_candidates qobj (Int64.of_int max_num_candidates)
+
+  let _get_query_statistics = foreign ~from:libfalconn "qobj_get_query_statistics" (t @-> returning (ptr QueryStatistics.stats))
+  let get_query_statistics qobj = _get_query_statistics qobj |> fun p -> !@p |> QueryStatistics.from_struct
 end
 
 module LSHNearestNeighborQueryPool = struct
@@ -154,21 +205,32 @@ module LSHNearestNeighborQueryPool = struct
 
   let _create =
     foreign ~from:libfalconn "create_query_pool"
-      (LSHNearestNeighborTable.t @-> int @-> int @-> int @-> returning t)
+      (LSHNearestNeighborTable.t @-> int32_t @-> int64_t @-> int32_t @-> returning t)
 
   let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) ?(num_query_objects=0) table =
-    _create table num_probes max_num_candidates num_query_objects
+    _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates) (Int32.of_int num_query_objects)
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qpool_find_k_nearest_neighbors"
-      (t @-> ptr float @-> int @-> int @-> returning results)
+      (t @-> ptr float @-> int32_t @-> int32_t @-> returning results)
 
-  let find_k_nearest_neighbors qobj query k =
-    let r = _find_k_nearest_neighbors qobj (bigarray_start array1 query) k (Array1.dim query) in
+  let find_k_nearest_neighbors pool query k =
+    let r = _find_k_nearest_neighbors pool (bigarray_start array1 query) (Int32.of_int k) (Array1.dim query |> Int32.of_int) in
     bigarray_of_ptr array1 (getf r length |> Unsigned.UInt64.to_int) int32 (getf r arr)
 
-  let set_num_probes =
-    foreign ~from:libfalconn "qpool_set_num_probes"
-      (t @-> int @-> returning void)
+  let _get_num_probes = foreign ~from:libfalconn "qpool_get_num_probes" (t @-> returning int32_t)
+  let get_num_probes pool = _get_num_probes pool |> Int32.to_int
+
+  let _set_num_probes = foreign ~from:libfalconn "qpool_set_num_probes" (t @-> int32_t @-> returning void)
+  let set_num_probes pool num_probes = _set_num_probes pool (Int32.of_int num_probes)
+
+  let _get_max_num_candidates = foreign ~from:libfalconn "qpool_get_max_num_candidates" (t @-> returning int64_t)
+  let get_max_num_candidates pool = _get_max_num_candidates pool |> Int64.to_int
+
+  let _set_max_num_candidates = foreign ~from:libfalconn "qpool_set_max_num_candidates" (t @-> int64_t @-> returning void)
+  let set_max_num_candidates pool max_num_candidates = _set_max_num_candidates pool (Int64.of_int max_num_candidates)
+
+  let _get_query_statistics = foreign ~from:libfalconn "qpool_get_query_statistics" (t @-> returning (ptr QueryStatistics.stats))
+  let get_query_statistics pool = _get_query_statistics pool |> fun p -> !@p |> QueryStatistics.from_struct
 end
 
