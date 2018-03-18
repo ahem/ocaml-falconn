@@ -1,31 +1,47 @@
 val libfalconn : Dl.library
+
 module LSHConstructionParameters :
   sig
-    type t
+    type lsh_family_t = Unknown | CrossPolytope | Hyperplane
 
-    val create :
-      l:int ->
-      dimension:int ->
-      lsh_family:[< `CrossPolytope | `Hyperplane | `Unknown ] ->
-      distance_function:[< `EuclideanSquared
-                         | `NegativeInnerProduct
-                         | `Unknown ] ->
-      num_rotations:int ->
-      storage_hash_table:[< `BitPackedFlatHashTable
-                          | `FlatHashTable
-                          | `LinearProbingHashTable
-                          | `STLHashTable
-                          | `Unknown ] ->
-      num_setup_threads:int -> ?k:int -> unit -> t
+    type distance_function_t =
+        Unknown
+      | EuclideanSquared
+      | NegativeInnerProduct
+
+    type storage_hash_table_t =
+        Unknown
+      | BitPackedFlatHashTable
+      | FlatHashTable
+      | LinearProbingHashTable
+      | STLHashTable
+
+    type t = {
+      dimension : int;
+      lsh_family : lsh_family_t;
+      distance_function : distance_function_t;
+      k : int;
+      l : int;
+      storage_hash_table : storage_hash_table_t;
+      num_setup_threads : int;
+      seed : int;
+      last_cp_dimension : int;
+      num_rotations : int;
+      feature_hashing_dimension : int;
+    }
+
+    val empty : t
+
+    val get_default_parameters : int -> int -> distance_function_t -> bool -> t
 
     val compute_number_of_hash_functions : t -> int -> t
   end
+
 module LSHNearestNeighborTable :
   sig
     type t
 
-    val create :
-      LSHConstructionParameters.t -> (float, 'a, 'b) Bigarray.Array2.t -> t
+    val create : LSHConstructionParameters.t -> (float, 'a, 'b) Bigarray.Array2.t -> t
   end
 
 module LSHNearestNeighborQuery :
@@ -60,3 +76,4 @@ module LSHNearestNeighborQueryPool :
 
     val set_num_probes : t -> int -> unit
   end
+
