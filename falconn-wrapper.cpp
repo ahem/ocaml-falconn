@@ -135,7 +135,7 @@ extern "C" {
     }
 
     // =============================================
-    // QueryPool
+    // QueryStatistics
     // =============================================
     
     void free_query_statistics(QueryStatistics *stats) {
