@@ -40,6 +40,8 @@ module LSHNearestNeighborTable :
     type t
 
     val create : LSHConstructionParameters.t -> (float, 'a, 'b) Bigarray.Array2.t -> t
+
+    val free : t -> unit
   end
 
 module QueryStatistics :
@@ -64,6 +66,8 @@ module LSHNearestNeighborQuery :
       ?num_probes:int ->
       ?max_num_candidates:int -> LSHNearestNeighborTable.t -> t
 
+    val free : t -> unit
+
     val find_k_nearest_neighbors :
       t ->
       (float, 'a, 'b) Bigarray.Array1.t ->
@@ -86,6 +90,8 @@ module LSHNearestNeighborQueryPool :
       ?num_probes:int ->
       ?max_num_candidates:int ->
       ?num_query_objects:int -> LSHNearestNeighborTable.t -> t
+
+    val free : t -> unit
 
     val find_k_nearest_neighbors :
       t ->

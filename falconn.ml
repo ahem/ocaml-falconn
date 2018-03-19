@@ -83,6 +83,8 @@ module LSHConstructionParameters = struct
     feature_hashing_dimension = (-1);
   }
 
+  let free = foreign ~from:libfalconn "free_params" ((ptr params) @-> returning void)
+
   let _get_default_parameters =
     foreign ~from:libfalconn "get_default_parameters"
       (int64_t @-> int32_t @-> int32_t @-> int32_t @-> returning (ptr params))
@@ -92,15 +94,20 @@ module LSHConstructionParameters = struct
     let dimension = Int32.of_int dimension in
     let distance_function = Int32.of_int (match distance_function with Unknown -> 0 | NegativeInnerProduct -> 1 | EuclideanSquared -> 2) in
     let is_sufficiently_dense = (Int32.of_int (match is_sufficiently_dense with true -> 1 | false -> 0)) in
-    _get_default_parameters dataset_size dimension distance_function is_sufficiently_dense |> fun p -> (from_struct !@p)
+    let p = _get_default_parameters dataset_size dimension distance_function is_sufficiently_dense in
+    let r = from_struct !@p in
+    free p;
+    r
 
   let _compute_number_of_hash_functions =
     foreign ~from:libfalconn "compute_number_of_hash_functions"
       (ptr params @-> int32_t @-> returning (ptr params))
 
   let compute_number_of_hash_functions (p: t) (num_of_hash_bits: int) : t =
-    _compute_number_of_hash_functions (to_struct p |> addr) (Int32.of_int num_of_hash_bits) |> fun p -> (from_struct !@p)
-
+    let p = _compute_number_of_hash_functions (to_struct p |> addr) (Int32.of_int num_of_hash_bits) in
+    let r = from_struct !@p in
+    free p;
+    r
 end
 
 module LSHNearestNeighborTable = struct
@@ -116,6 +123,8 @@ module LSHNearestNeighborTable = struct
     let num_dimensions = Array2.dim2 dataset in
     let dataset_ptr = bigarray_start array2 dataset in
     _create_table (LSHConstructionParameters.to_struct params |> addr) num_points num_dimensions dataset_ptr
+
+  let free = foreign ~from:libfalconn "free_table" (t @-> returning void)
 end
 
 module QueryStatistics = struct
@@ -149,6 +158,8 @@ module QueryStatistics = struct
     average_num_unique_candidates = getf s average_num_unique_candidates;
     num_queries                   = Int64.to_int (getf s num_queries);
   }
+
+  let free = foreign ~from:libfalconn "free_query_statistics" ((ptr stats) @-> returning void)
  
 end
 
@@ -163,11 +174,13 @@ module LSHNearestNeighborQuery = struct
   let t : t typ = ptr void
 
   let _create =
-    foreign ~from:libfalconn "create_query_object"
+    foreign ~from:libfalconn "qobj_create"
       (LSHNearestNeighborTable.t @-> int32_t @-> int64_t @-> returning t)
 
   let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) table =
     _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates)
+
+  let free = foreign ~from:libfalconn "qobj_free" (t @-> returning void)
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qobj_find_k_nearest_neighbors"
@@ -196,7 +209,11 @@ module LSHNearestNeighborQuery = struct
   let set_max_num_candidates qobj max_num_candidates = _set_max_num_candidates qobj (Int64.of_int max_num_candidates)
 
   let _get_query_statistics = foreign ~from:libfalconn "qobj_get_query_statistics" (t @-> returning (ptr QueryStatistics.stats))
-  let get_query_statistics qobj = _get_query_statistics qobj |> fun p -> !@p |> QueryStatistics.from_struct
+  let get_query_statistics qobj =
+    let stats_ptr = _get_query_statistics qobj in
+    let stats = QueryStatistics.from_struct !@stats_ptr in
+    QueryStatistics.free stats_ptr;
+    stats
 end
 
 module LSHNearestNeighborQueryPool = struct
@@ -204,11 +221,13 @@ module LSHNearestNeighborQueryPool = struct
   let t : t typ = ptr void
 
   let _create =
-    foreign ~from:libfalconn "create_query_pool"
+    foreign ~from:libfalconn "qpool_create"
       (LSHNearestNeighborTable.t @-> int32_t @-> int64_t @-> int32_t @-> returning t)
 
   let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) ?(num_query_objects=0) table =
     _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates) (Int32.of_int num_query_objects)
+
+  let free = foreign ~from:libfalconn "qpool_free" (t @-> returning void)
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qpool_find_k_nearest_neighbors"
@@ -231,6 +250,10 @@ module LSHNearestNeighborQueryPool = struct
   let set_max_num_candidates pool max_num_candidates = _set_max_num_candidates pool (Int64.of_int max_num_candidates)
 
   let _get_query_statistics = foreign ~from:libfalconn "qpool_get_query_statistics" (t @-> returning (ptr QueryStatistics.stats))
-  let get_query_statistics pool = _get_query_statistics pool |> fun p -> !@p |> QueryStatistics.from_struct
+  let get_query_statistics pool =
+    let stats_ptr = _get_query_statistics pool in
+    let stats = QueryStatistics.from_struct !@stats_ptr in
+    QueryStatistics.free stats_ptr;
+    stats
 end
 
