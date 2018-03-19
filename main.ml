@@ -8,6 +8,13 @@ let read_lda_list filename =
   | C_layout, Float32 -> Some (arr: (float, float32_elt, c_layout) Array2.t)
   | _ -> None
 
+let test_query_object table q =
+  let query = LSHNearestNeighborQuery.create ~num_probes:80 table in
+  Printf.printf "constructed query object\n";
+  let result = LSHNearestNeighborQuery.find_k_nearest_neighbors query q 10 in
+  for i = 0 to 9 do Printf.printf "%d\n" (Int32.to_int_exn result.{i}) done;
+  Printf.printf "average_total_query_time: %f\n" (LSHNearestNeighborQuery.get_query_statistics query).average_total_query_time
+
 let () =
   let dataset = (Option.value_exn (read_lda_list "./lda_list.npy")) in
   Printf.printf "loaded dataset\n";
@@ -21,23 +28,16 @@ let () =
   let table = LSHNearestNeighborTable.create params dataset in
   Printf.printf "constructed table\n";
 
-  let query_object = LSHNearestNeighborQuery.create ~num_probes:80 table in
-  Printf.printf "constructed query object\n";
-
   let q = Array2.slice_left dataset 3 in
-  let result = LSHNearestNeighborQuery.find_k_nearest_neighbors query_object q 10 in
-  for i = 0 to 9 do Printf.printf "%d\n" (Int32.to_int_exn result.{i}) done;
+  test_query_object table q;
+  test_query_object table q;
+  test_query_object table q;
+  test_query_object table q;
+  test_query_object table q;
 
-  Printf.printf "average_total_query_time: %f\n" (LSHNearestNeighborQuery.get_query_statistics query_object).average_total_query_time;
-
-  LSHNearestNeighborQuery.free query_object;
-
-  let query_pool = LSHNearestNeighborQueryPool.create table ~num_probes:80 in
+  let query = LSHNearestNeighborQueryPool.create table ~num_probes:80 in
   Printf.printf "constructed query pool\n";
-  let result = LSHNearestNeighborQueryPool.find_k_nearest_neighbors query_pool q 10 in
+  let result = LSHNearestNeighborQueryPool.find_k_nearest_neighbors query q 10 in
   for i = 0 to 9 do Printf.printf "%d\n" (Int32.to_int_exn result.{i}) done;
-
-  LSHNearestNeighborQueryPool.free query_pool;
-  LSHNearestNeighborTable.free table;
 
   ()

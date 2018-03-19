@@ -118,13 +118,15 @@ module LSHNearestNeighborTable = struct
     foreign ~from:libfalconn "create_table"
       ((ptr LSHConstructionParameters.params) @-> int @-> int @-> ptr float @-> returning t)
 
+  let free = foreign ~from:libfalconn "free_table" (t @-> returning void)
+
   let create params dataset =
     let num_points = Array2.dim1 dataset in
     let num_dimensions = Array2.dim2 dataset in
     let dataset_ptr = bigarray_start array2 dataset in
-    _create_table (LSHConstructionParameters.to_struct params |> addr) num_points num_dimensions dataset_ptr
-
-  let free = foreign ~from:libfalconn "free_table" (t @-> returning void)
+    let table = _create_table (LSHConstructionParameters.to_struct params |> addr) num_points num_dimensions dataset_ptr in
+    Gc.finalise free table;
+    table
 end
 
 module QueryStatistics = struct
@@ -177,10 +179,12 @@ module LSHNearestNeighborQuery = struct
     foreign ~from:libfalconn "qobj_create"
       (LSHNearestNeighborTable.t @-> int32_t @-> int64_t @-> returning t)
 
-  let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) table =
-    _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates)
-
   let free = foreign ~from:libfalconn "qobj_free" (t @-> returning void)
+
+  let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) table =
+    let qobj = _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates) in
+    Gc.finalise free qobj;
+    qobj
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qobj_find_k_nearest_neighbors"
@@ -224,10 +228,12 @@ module LSHNearestNeighborQueryPool = struct
     foreign ~from:libfalconn "qpool_create"
       (LSHNearestNeighborTable.t @-> int32_t @-> int64_t @-> int32_t @-> returning t)
 
-  let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) ?(num_query_objects=0) table =
-    _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates) (Int32.of_int num_query_objects)
-
   let free = foreign ~from:libfalconn "qpool_free" (t @-> returning void)
+
+  let create ?(num_probes=(-1)) ?(max_num_candidates=(-1)) ?(num_query_objects=0) table =
+    let pool = _create table (Int32.of_int num_probes) (Int64.of_int max_num_candidates) (Int32.of_int num_query_objects) in
+    Gc.finalise free pool;
+    pool
 
   let _find_k_nearest_neighbors =
     foreign ~from:libfalconn "qpool_find_k_nearest_neighbors"

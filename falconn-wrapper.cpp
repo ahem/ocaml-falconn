@@ -1,4 +1,8 @@
 #include <vector>
+#include <fstream>
+#include <iterator>
+#include <memory>
+#include <iostream>
 
 #include <falconn/lsh_nn_table.h>
 
@@ -34,6 +38,7 @@ extern "C" {
     }
 
     void free_params(LSHConstructionParameters *params) {
+        std::cout << "freeing params" << std::endl;
         delete params;
     }
 
@@ -46,6 +51,7 @@ extern "C" {
     }
 
     void free_table(LSHNearestNeighborTable<Point> *table) {
+        std::cout << "freeing table" << std::endl;
         delete table;
     }
 
@@ -54,10 +60,12 @@ extern "C" {
     // =============================================
 
     LSHNearestNeighborQuery<Point>* qobj_create(LSHNearestNeighborTable<Point> &table, int32_t num_probes, int64_t max_num_candidates) {
+        std::cout << "constructing query_object" << std::endl;
         return table.construct_query_object(num_probes, max_num_candidates).release();
     }
 
     void qobj_free(LSHNearestNeighborQuery<Point> *query_object) {
+        std::cout << "freeing query_object" << std::endl;
         delete query_object;
     }
 
@@ -97,10 +105,12 @@ extern "C" {
  
     LSHNearestNeighborQueryPool<Point>* qpool_create(
             LSHNearestNeighborTable<Point> &table, int32_t num_probes, int64_t max_num_candidates, int32_t num_query_objects) {
+        std::cout << "constructing pool" << std::endl;
         return table.construct_query_pool(num_probes, max_num_candidates, num_query_objects).release();
     }
 
     void qpool_free(LSHNearestNeighborQueryPool<Point> *pool) {
+        std::cout << "freeing pool" << std::endl;
         delete pool;
     }
 
